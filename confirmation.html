@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Booking confirmed — ChrisSlots</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="section" style="padding-top:28px">
+  <div class="container" id="confirm-root" style="max-width:640px;margin:0 auto"></div>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/booking.js"></script>
+<script src="js/app.js"></script>
+<script>
+(() => {
+  const ref = App.qs("ref");
+  const root = document.getElementById("confirm-root");
+  const b = ref ? Booking.getBooking(ref) : null;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    if (!b) {
+      root.innerHTML = `<div class="empty-state"><div class="em-icon">🔍</div><h3>Booking not found</h3><p>We couldn't find that confirmation.</p><a class="btn btn-primary" href="dashboard.html?tab=bookings">Go to My Bookings</a></div>`;
+      return;
+    }
+    root.innerHTML = `
+      <div class="center" style="margin-bottom:26px">
+        <div style="width:66px;height:66px;border-radius:50%;background:#ECFDF5;color:#047857;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 14px">✓</div>
+        <h1>Booking Confirmed</h1>
+        <p class="muted">A confirmation has been added to your notifications.</p>
+      </div>
+
+      <div class="form-card">
+        <div class="flex" style="justify-content:space-between;align-items:center;margin-bottom:14px">
+          <span class="badge badge-confirmed">${b.status}</span>
+          <span class="muted text-sm">Ref. ${b.ref}</span>
+        </div>
+        <h3 style="margin-top:0">${b.title}</h3>
+        <div class="card-meta" style="font-size:14.5px;gap:16px">
+          <span>👤 ${b.customer ? b.customer.name : (Auth.currentUser()?.name||"Guest")}</span>
+          <span>📅 ${b.date}</span><span>🕒 ${b.time || "—"}</span><span>📍 ${b.location || "—"}</span>
+        </div>
+        <div class="tag-row" style="margin-top:12px">
+          ${Object.entries(b.details || {}).filter(([,v])=>v).map(([k,v]) => `<span class="tag">${k.replace(/([A-Z])/g," $1")}: ${v}</span>`).join("")}
+        </div>
+        <hr class="divider">
+        <div class="flex" style="justify-content:space-between"><span>Total paid</span><b>${App.money(b.total)}</b></div>
+        <div class="flex" style="justify-content:space-between;margin-top:6px"><span class="muted text-sm">Payment method</span><span class="text-sm">${b.paymentMethod || "Card"}</span></div>
+      </div>
+
+      <div class="flex" style="gap:12px;margin-top:22px;flex-wrap:wrap">
+        <a class="btn btn-secondary" href="dashboard.html?tab=bookings">View booking</a>
+        <button class="btn btn-secondary" onclick="window.print()">🖨 Print / Download ticket</button>
+        <a class="btn btn-primary" href="index.html">Return home</a>
+      </div>
+    `;
+  });
+})();
+</script>
+</body>
+</html>

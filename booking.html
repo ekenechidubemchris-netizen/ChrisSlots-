@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book — ChrisSlots</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="section" style="padding-top:28px">
+  <div class="container" id="booking-root"></div>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/booking.js"></script>
+<script src="js/app.js"></script>
+<script>
+(() => {
+  const type = App.qs("type", "cab");
+  const root = document.getElementById("booking-root");
+
+  function renderCabSearch() {
+    const today = App.todayISO();
+    root.innerHTML = `
+      <h1>Book a cab</h1>
+      <p class="muted">Enter your trip details to see nearby vehicles and prices.</p>
+      <div class="form-card" style="max-width:720px">
+        <div class="form-row">
+          <div class="form-group"><label>Pickup location</label><input id="cab-from" value="Current location"></div>
+          <div class="form-group"><label>Destination</label><input id="cab-to" placeholder="Where to?"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Date</label><input type="date" id="cab-date" value="${today}" min="${today}"></div>
+          <div class="form-group"><label>Pickup time</label><input type="time" id="cab-time" value="12:00"></div>
+          <div class="form-group"><label>Passengers</label><input type="number" id="cab-pax" value="1" min="1" max="6"></div>
+        </div>
+        <button class="btn btn-primary" onclick="CabFlow.search()">Show available rides</button>
+      </div>
+      <div id="cab-results" style="margin-top:34px"></div>
+    `;
+  }
+
+  function renderCabResults(distanceKm) {
+    const cabs = DB.getCabs(distanceKm);
+    document.getElementById("cab-results").innerHTML = `
+      <h3>Available vehicles</h3>
+      <div class="grid">
+        ${cabs.map(c => `
+          <div class="card">
+            <div class="card-media" style="aspect-ratio:16/9"><img src="${c.image}" alt="${c.cls} vehicle"></div>
+            <div class="card-body">
+              <div class="card-top"><h3>${c.cls}</h3></div>
+              <div class="card-meta"><span>👤 Up to ${c.capacity}</span><span>⏱ ETA ${c.etaMin} min</span><span>🕒 ${c.durationMin} min trip</span></div>
+              <p class="muted text-sm">${c.desc}</p>
+              <div class="card-foot"><span class="price">${App.money(c.price)}</span><button class="btn btn-primary btn-sm" onclick="CabFlow.book('${c.id}')">Book ride</button></div>
+            </div>
+          </div>`).join("")}
+      </div>`;
+  }
+
+  window.CabFlow = {
+    search() {
+      const from = document.getElementById("cab-from").value.trim();
+      const to = document.getElementById("cab-to").value.trim();
+      if (!to) { App.toast("Please enter a destination"); return; }
+      const distanceKm = 2 + (from.length + to.length) % 18;
+      window._cabCtx = { from, to, date: document.getElementById("cab-date").value, time: document.getElementById("cab-time").value, pax: document.getElementById("cab-pax").value, distanceKm };
+      renderCabResults(distanceKm);
+    },
+    book(cabId) {
+      App.requireAuthOrPrompt(() => {
+        const ctx = window._cabCtx;
+        const cabs = DB.getCabs(ctx.distanceKm);
+        const cab = cabs.find(c => c.id === cabId);
+        Booking.setPending({
+          type: "cab", title: `${cab.cls} ride to ${ctx.to}`, provider: "ChrisSlots Rides",
+          date: ctx.date, time: ctx.time, location: `${ctx.from} → ${ctx.to}`,
+          details: { vehicle: cab.cls, passengers: ctx.pax, eta: cab.etaMin + " min" },
+          total: cab.price,
+        });
+        location.href = "checkout.html";
+      });
+    }
+  };
+
+  function renderFlightDetails() {
+    const id = App.qs("id"), from = App.qs("from","New York"), to = App.qs("to","Boston"), date = App.qs("date", App.todayISO());
+    const flight = DB.getFlights(from, to).find(f => f.id === id) || DB.getFlights(from, to)[0];
+    root.innerHTML = `
+      <a href="listing.html?type=flight&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}" class="btn btn-ghost" style="padding-left:0">← Back to flights</a>
+      <div class="two-col">
+        <div>
+          <h1>${flight.airline} · ${flight.flightNo}</h1>
+          <p class="muted">${from} → ${to} · ${date}</p>
+          <div class="form-card">
+            <h3 style="margin-top:0">Passenger details</h3>
+            <div class="form-row">
+              <div class="form-group"><label>Full name</label><input id="fl-name" value="${Auth.currentUser()?.name || ""}"></div>
+              <div class="form-group"><label>Email</label><input id="fl-email" value="${Auth.currentUser()?.email || ""}"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Passengers</label><input type="number" id="fl-pax" value="1" min="1" max="9"></div>
+              <div class="form-group"><label>Travel class</label><select id="fl-class"><option>${flight.cls}</option><option>Economy</option><option>Premium Economy</option><option>Business</option></select></div>
+            </div>
+            <button class="btn btn-primary" onclick="FlightFlow.continueBooking('${flight.id}','${from}','${to}','${date}')">Continue to checkout</button>
+          </div>
+        </div>
+        <div class="sticky">
+          <div class="form-card">
+            <h3 style="margin-top:0">Flight summary</h3>
+            <div class="card-meta" style="font-size:14px"><span>🛫 ${flight.depTime} ${from}</span></div>
+            <div class="card-meta" style="font-size:14px;margin-top:6px"><span>🛬 ${flight.arrTime} ${to}</span></div>
+            <div class="card-meta" style="font-size:14px;margin-top:6px"><span>⏱ ${flight.durationH}h · ${flight.stops===0?"Nonstop":flight.stops+" stop(s)"}</span></div>
+            <hr class="divider">
+            <div class="flex" style="justify-content:space-between"><span>Price per passenger</span><b>${App.money(flight.price)}</b></div>
+          </div>
+        </div>
+      </div>`;
+  }
+  window.FlightFlow = {
+    continueBooking(id, from, to, date) {
+      App.requireAuthOrPrompt(() => {
+        const flight = DB.getFlights(from, to).find(f => f.id === id) || DB.getFlights(from, to)[0];
+        const pax = Number(document.getElementById("fl-pax").value || 1);
+        Booking.setPending({
+          type: "flight", title: `${flight.airline} ${flight.flightNo} (${from} → ${to})`, provider: flight.airline,
+          date, time: flight.depTime, location: `${from} → ${to}`,
+          details: { passengers: pax, cls: document.getElementById("fl-class").value },
+          total: flight.price * pax,
+        });
+        location.href = "checkout.html";
+      });
+    }
+  };
+
+  document.addEventListener("DOMContentLoaded", () => {
+    if (type === "flight") renderFlightDetails();
+    else renderCabSearch();
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Account — ChrisSlots</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<div id="dash-guard" class="section" style="display:none">
+  <div class="container empty-state">
+    <div class="em-icon">🔒</div>
+    <h3>Log in to see your account</h3>
+    <p>Your bookings, favorites and profile live here once you're logged in.</p>
+    <a class="btn btn-primary" href="login.html?redirect=dashboard.html">Log in</a>
+  </div>
+</div>
+
+<div id="dash-main" style="display:none">
+  <header class="page-hero">
+    <div class="container flex items-center gap-12">
+      <div class="avatar" id="dash-avatar" style="width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px"></div>
+      <div>
+        <h1 id="dash-name" style="margin-bottom:2px"></h1>
+        <p id="dash-email" style="margin:0"></p>
+        <p id="dash-since" class="hint" style="color:rgba(255,255,255,.6);margin:2px 0 0"></p>
+      </div>
+    </div>
+  </header>
+
+  <main class="section">
+    <div class="container">
+      <div class="tabs-row">
+        <button class="tab-btn" data-tab="bookings" onclick="Dashboard.setTab('bookings')">🧾 My Bookings</button>
+        <button class="tab-btn" data-tab="wallet" onclick="Dashboard.setTab('wallet')">👛 Wallet</button>
+        <button class="tab-btn" data-tab="favorites" onclick="Dashboard.setTab('favorites')">❤️ Favorites</button>
+        <button class="tab-btn" data-tab="profile" onclick="Dashboard.setTab('profile')">👤 Profile</button>
+      </div>
+
+      <div class="dash-panel" data-panel="bookings">
+        <div class="filter-chip-row" style="margin-bottom:20px">
+          <button class="chip booking-filter-chip active" data-f="upcoming" onclick="Dashboard.setBookingFilter('upcoming')">Upcoming</button>
+          <button class="chip booking-filter-chip" data-f="completed" onclick="Dashboard.setBookingFilter('completed')">Completed</button>
+          <button class="chip booking-filter-chip" data-f="cancelled" onclick="Dashboard.setBookingFilter('cancelled')">Cancelled</button>
+          <button class="chip booking-filter-chip" data-f="all" onclick="Dashboard.setBookingFilter('all')">All</button>
+        </div>
+        <div id="bookings-list"></div>
+      </div>
+
+      <div class="dash-panel" data-panel="wallet" style="display:none">
+        <div class="two-col">
+          <div>
+            <div id="wallet-balance-wrap"></div>
+            <h3>Transaction history</h3>
+            <div class="form-card" id="wallet-txn-list"></div>
+          </div>
+          <div class="form-card sticky">
+            <h3 style="margin-top:0">Add money</h3>
+            <div class="quick-amounts" id="wallet-quick-amounts"></div>
+            <div class="form-group"><label>Amount</label><input type="number" id="wallet-amount" min="1" value="50"></div>
+            <div class="form-group"><label>Top up with</label>
+              <select id="wallet-topup-method"><option>Card ending in 4242</option><option>PayPal</option><option>Apple Pay</option><option>Google Pay</option></select>
+            </div>
+            <button class="btn btn-primary btn-block" onclick="Dashboard.topUp()">Add to wallet</button>
+            <p class="hint" style="margin-top:10px">Demo top-up — no real payment is processed.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-panel" data-panel="favorites" style="display:none">
+        <div id="favorites-list" class="grid"></div>
+      </div>
+
+      <div class="dash-panel" data-panel="profile" style="display:none">
+        <div class="form-card" style="max-width:520px" id="profile-form-wrap"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="site-footer"></div>
+
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/booking.js"></script>
+<script src="js/app.js"></script>
+<script src="js/dashboard.js"></script>
+<script>document.addEventListener("DOMContentLoaded", () => { Booking.markAllRead(); Dashboard.init(); });</script>
+</body>
+</html>

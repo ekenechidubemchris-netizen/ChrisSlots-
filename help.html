@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Help Center — ChrisSlots</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<header class="page-hero">
+  <div class="container">
+    <h1>Help Center</h1>
+    <p>Answers about booking, cancellations, payments and more.</p>
+  </div>
+</header>
+
+<main class="section">
+  <div class="container">
+    <div class="field" style="max-width:480px;margin-bottom:34px">
+      <input type="text" id="faq-search" placeholder="Search help articles..." oninput="filterFaq(this.value)" style="border:1px solid var(--c-border);border-radius:10px;padding:13px 16px;font-size:15px;width:100%">
+    </div>
+
+    <div class="two-col">
+      <div>
+        <h3 id="booking-help">Booking</h3>
+        <div class="faq-item"><div class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span>How do I make a booking?</span><span class="chev">⌄</span></div><div class="faq-a"><p>Search a category from the homepage, choose your date, time and details, then confirm on the checkout page. You'll get a confirmation with a reference number.</p></div></div>
+        <div class="faq-item"><div class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span>Can I edit a booking after confirming it?</span><span class="chev">⌄</span></div><div class="faq-a"><p>Editable details vary by service. For now, cancel from My Bookings and create a new reservation with the updated details.</p></div></div>
+        <div class="faq-item"><div class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span>Do I need an account to book?</span><span class="chev">⌄</span></div><div class="faq-a"><p>Yes — creating a free account lets us keep your bookings, favorites and receipts in one place.</p></div></div>
+
+        <h3 id="cancellation" style="margin-top:36px">Cancellations</h3>
+        <div class="faq-item"><div class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span>What's the cancellation policy?</span><span class="chev">⌄</span></div><div class="faq-a"><p>Most bookings can be cancelled free of charge up to 24 hours before the reserved time from the My Bookings dashboard.</p></div></div>
+        <div class="faq-item"><div class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span>How do I cancel a booking?</span><span class="chev">⌄</span></div><div class="faq-a"><p>Go to My Bookings, find the reservation under Upcoming, and select Cancel.</p></div></div>
+
+        <h3 id="payment" style="margin-top:36px">Payment</h3>
+        <div class="faq-item"><div class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span>What payment methods are supported?</span><span class="chev">⌄</span></div><div class="faq-a"><p>This demo uses a placeholder payment form. In production, ChrisSlots would connect to a real payment provider supporting major cards and digital wallets.</p></div></div>
+        <div class="faq-item"><div class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span>Is my payment information secure?</span><span class="chev">⌄</span></div><div class="faq-a"><p>No real payment details are collected or stored in this demo.</p></div></div>
+      </div>
+
+      <div>
+        <div class="form-card" id="contact">
+          <h3 style="margin-top:0">Contact support</h3>
+          <p class="muted">Can't find what you're looking for? Send us a message and our team will follow up.</p>
+          <div class="form-group"><label>Your email</label><input placeholder="you@email.com"></div>
+          <div class="form-group"><label>Message</label><textarea placeholder="How can we help?"></textarea></div>
+          <button class="btn btn-primary btn-block" onclick="App.toast('Message sent — our team will reply within 24 hours.')">Send message</button>
+          <hr class="divider">
+          <p class="text-sm muted">Or reach us directly:</p>
+          <p class="text-sm">📧 support@chrisslots.com<br>📞 1-800-555-0134</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/booking.js"></script>
+<script src="js/app.js"></script>
+<script>
+function filterFaq(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll(".faq-item").forEach(item => {
+    const text = item.textContent.toLowerCase();
+    item.style.display = text.includes(q) ? "block" : "none";
+  });
+}
+</script>
+</body>
+</html>

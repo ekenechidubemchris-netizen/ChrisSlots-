@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Select seats — ChrisSlots</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="section" style="padding-top:28px">
+  <div class="container">
+    <div class="steps-row">
+      <div class="step done"><span class="step-num">1</span><span>Search</span></div><div class="step-line"></div>
+      <div class="step active"><span class="step-num">2</span><span>Select seats</span></div><div class="step-line"></div>
+      <div class="step"><span class="step-num">3</span><span>Checkout</span></div><div class="step-line"></div>
+      <div class="step"><span class="step-num">4</span><span>Confirmation</span></div>
+    </div>
+
+    <div class="two-col" id="seatmap-root"></div>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/booking.js"></script>
+<script src="js/app.js"></script>
+<script>
+(() => {
+  const type = App.qs("type", "train");
+  const id = App.qs("id");
+  const from = App.qs("from"), to = App.qs("to"), date = App.qs("date", App.todayISO());
+  let selected = [];
+  let item, basePrice, rows, cols, layoutGap;
+
+  function loadItem() {
+    if (type === "train") {
+      item = DB.getTrains(from || "New York", to || "Boston").find(t => t.id === id) || DB.getTrains(from||"New York", to||"Boston")[0];
+      basePrice = item.price; rows = 16; cols = 4; layoutGap = 2;
+    } else if (type === "bus") {
+      item = DB.getBuses(from || "New York", to || "Boston").find(t => t.id === id) || DB.getBuses(from||"New York", to||"Boston")[0];
+      basePrice = item.price; rows = 11; cols = 4; layoutGap = 2;
+    } else if (type === "cinema") {
+      const movie = DB.getMovie(id);
+      item = { name: movie.title, cinema: App.qs("cinema", "Downtown 12"), time: App.qs("time","7:45 PM"), from: "", to: "" };
+      basePrice = Number(App.qs("price", 14)); rows = 8; cols = 10; layoutGap = 5;
+    }
+  }
+
+  function seatState(seed, r, c) {
+    const n = (r * 131 + c * 977 + seed) % 100;
+    if (n < 14) return "occupied";
+    if (n < 20) return "reserved";
+    return "available";
+  }
+
+  function render() {
+    const root = document.getElementById("seatmap-root");
+    const seed = (id || "x").length * 53 + rows;
+    let rowsHTML = "";
+    for (let r = 0; r < rows; r++) {
+      let cells = "";
+      for (let c = 0; c < cols; c++) {
+        if (c === layoutGap) cells += `<span class="seat-gap"></span>`;
+        const label = String.fromCharCode(65 + r) + (c + 1);
+        const state = seatState(seed, r, c);
+        cells += `<button type="button" class="seat ${state}" ${state !== "available" ? "disabled" : ""} onclick="Seatmap.toggle('${label}', this)">${label}</button>`;
+      }
+      rowsHTML += `<div class="seat-row">${cells}</div>`;
+    }
+
+    root.innerHTML = `
+      <div>
+        <h2>${headerTitle()}</h2>
+        <p class="muted">${subTitle()}</p>
+        <div class="seat-legend">
+          <div class="legend-item"><span class="legend-swatch" style="background:#E2E8F0"></span>Available</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:var(--c-action)"></span>Selected</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#FCA5A5"></span>Occupied</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#FDE68A"></span>Reserved</div>
+        </div>
+        ${type === "cinema" ? `<div class="screen-bar"></div><p class="center muted text-sm" style="margin-bottom:18px">Screen this way</p>` : ""}
+        <div class="seat-map">${rowsHTML}</div>
+      </div>
+      <div class="sticky">
+        <div class="form-card">
+          <h3 style="margin-top:0">Your selection</h3>
+          <p id="seat-summary" class="muted">No seats selected yet.</p>
+          <hr class="divider">
+          <div class="flex" style="justify-content:space-between"><span>Price per seat</span><b>${App.money(basePrice)}</b></div>
+          <div class="flex" style="justify-content:space-between;margin-top:6px"><span>Total</span><b id="seat-total">${App.money(0)}</b></div>
+          <button class="btn btn-primary btn-block" style="margin-top:16px" id="continue-btn" disabled onclick="Seatmap.continueToCheckout()">Continue to checkout</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function headerTitle() {
+    if (type === "cinema") return `${item.name}`;
+    return `${item.name || item.company} · ${item.from} → ${item.to}`;
+  }
+  function subTitle() {
+    if (type === "cinema") return `${item.cinema} · ${item.time} · ${date}`;
+    return `${date} · Departs ${item.depTime} · Arrives ${item.arrTime}`;
+  }
+
+  function toggle(label, btn) {
+    const idx = selected.indexOf(label);
+    if (idx > -1) { selected.splice(idx, 1); btn.classList.remove("selected"); }
+    else { if (selected.length >= 6) { App.toast("You can select up to 6 seats"); return; } selected.push(label); btn.classList.add("selected"); }
+    document.getElementById("seat-summary").textContent = selected.length ? `Seats: ${selected.join(", ")}` : "No seats selected yet.";
+    document.getElementById("seat-total").textContent = App.money(basePrice * selected.length);
+    document.getElementById("continue-btn").disabled = selected.length === 0;
+  }
+
+  function continueToCheckout() {
+    App.requireAuthOrPrompt(() => {
+      const total = basePrice * selected.length;
+      const title = type === "cinema" ? `${item.name} — ${item.cinema}` : `${(item.name||item.company)} (${item.from} → ${item.to})`;
+      Booking.setPending({
+        type, title, provider: item.name || item.company,
+        date, time: type === "cinema" ? item.time : item.depTime, location: type === "cinema" ? item.cinema : `${item.from} → ${item.to}`,
+        details: { seats: selected.join(", "), class: item.cls || "" },
+        total,
+      });
+      location.href = "checkout.html";
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => { loadItem(); render(); });
+  window.Seatmap = { toggle, continueToCheckout };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout — ChrisSlots</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="section" style="padding-top:28px">
+  <div class="container">
+    <div class="steps-row">
+      <div class="step done"><span class="step-num">✓</span><span>Select</span></div><div class="step-line"></div>
+      <div class="step active"><span class="step-num">2</span><span>Checkout</span></div><div class="step-line"></div>
+      <div class="step"><span class="step-num">3</span><span>Confirmation</span></div>
+    </div>
+
+    <div id="checkout-root"></div>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/booking.js"></script>
+<script src="js/app.js"></script>
+<script>
+(() => {
+  const root = document.getElementById("checkout-root");
+  const FEE_RATE = 0.04;
+  let method = "card";
+
+  const METHODS = [
+    { id: "wallet", icon: "👛", label: "ChrisSlots Wallet", sub: "Pay from balance" },
+    { id: "card", icon: "💳", label: "Card", sub: "Credit or debit" },
+    { id: "paypal", icon: "🅿️", label: "PayPal", sub: "Redirect to pay" },
+    { id: "applepay", icon: "", label: "Apple Pay", sub: "One-tap checkout" },
+    { id: "googlepay", icon: "G", label: "Google Pay", sub: "One-tap checkout" },
+    { id: "cash", icon: "💵", label: "Cash", sub: "Pay driver directly" },
+  ];
+
+  function render() {
+    const pending = Booking.getPending();
+    const user = Auth.currentUser();
+    if (!pending) {
+      root.innerHTML = `<div class="empty-state"><div class="em-icon">🧺</div><h3>Nothing to check out yet</h3><p>Start by exploring a service to book.</p><a class="btn btn-primary" href="listing.html?type=all">Explore services</a></div>`;
+      return;
+    }
+    if (!user) { App.requireAuthOrPrompt(() => {}); }
+
+    const fee = Math.round(pending.total * FEE_RATE * 100) / 100;
+    const grandTotal = Math.round((pending.total + fee) * 100) / 100;
+    const balance = user ? Booking.getWalletBalance() : 0;
+    // default to wallet if it can cover the total, otherwise card
+    if (!render._initialized) { method = balance >= grandTotal ? "wallet" : "card"; render._initialized = true; }
+
+    const availableMethods = METHODS.filter(m => m.id !== "cash" || pending.type === "cab");
+
+    root.innerHTML = `
+      <h1>Checkout</h1>
+      <div class="two-col">
+        <div>
+          <div class="form-card">
+            <h3 style="margin-top:0">Booking summary</h3>
+            <div class="card-meta" style="font-size:14.5px;gap:16px">
+              <span>🏷 ${pending.title}</span>
+            </div>
+            <div class="card-meta" style="font-size:14.5px;gap:16px;margin-top:6px">
+              <span>📅 ${pending.date}</span><span>🕒 ${pending.time || "—"}</span><span>📍 ${pending.location || "—"}</span>
+            </div>
+            <div class="tag-row" style="margin-top:10px">
+              ${Object.entries(pending.details || {}).filter(([,v])=>v).map(([k,v]) => `<span class="tag">${labelize(k)}: ${v}</span>`).join("")}
+            </div>
+          </div>
+
+          <div class="form-card" style="margin-top:20px">
+            <h3 style="margin-top:0">Customer information</h3>
+            <div class="form-row">
+              <div class="form-group"><label>Full name</label><input id="co-name" value="${user ? user.name : ""}"></div>
+              <div class="form-group"><label>Email</label><input id="co-email" value="${user ? user.email : ""}"></div>
+            </div>
+            <div class="form-group"><label>Phone</label><input id="co-phone" value="${user ? user.phone || "" : ""}"></div>
+          </div>
+
+          <div class="form-card" style="margin-top:20px">
+            <h3 style="margin-top:0">Payment method</h3>
+            <p class="hint" style="margin-top:-6px">Demo payment interface — no real payment is processed. This is ready to connect to a real provider later.</p>
+            <div class="pay-methods">
+              ${availableMethods.map(m => `
+                <button type="button" class="pay-method ${method === m.id ? "active" : ""}" onclick="Checkout.setMethod('${m.id}')">
+                  <span class="pm-icon">${m.icon}</span>
+                  <span class="pm-label">${m.label}</span>
+                  <span class="pm-sub">${m.sub}</span>
+                </button>`).join("")}
+            </div>
+            <div id="pay-subform">${paySubform(method, balance, grandTotal, user)}</div>
+          </div>
+        </div>
+
+        <div class="sticky">
+          <div class="form-card">
+            <h3 style="margin-top:0">Price details</h3>
+            <div class="flex" style="justify-content:space-between;margin-bottom:8px"><span class="muted">Subtotal</span><span>${App.money(pending.total)}</span></div>
+            <div class="flex" style="justify-content:space-between;margin-bottom:8px"><span class="muted">Service fee</span><span>${App.money(fee)}</span></div>
+            <hr class="divider">
+            <div class="flex" style="justify-content:space-between"><span><b>Total</b></span><b>${App.money(grandTotal)}</b></div>
+            <button class="btn btn-primary btn-block" style="margin-top:18px" onclick="Checkout.confirm(${grandTotal})">${confirmLabel(method)}</button>
+            <p class="hint center" style="margin-top:10px">By confirming, you agree to ChrisSlots' Terms &amp; Conditions.</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function confirmLabel(m) {
+    if (m === "wallet") return "Pay from wallet";
+    if (m === "paypal") return "Continue to PayPal";
+    if (m === "applepay") return "Pay with  Apple Pay";
+    if (m === "googlepay") return "Pay with Google Pay";
+    if (m === "cash") return "Confirm booking";
+    return "Confirm & pay";
+  }
+
+  function paySubform(m, balance, grandTotal, user) {
+    if (m === "wallet") {
+      const enough = balance >= grandTotal;
+      return `
+        <div class="wallet-card">
+          <div>
+            <div class="wc-label">Wallet balance</div>
+            <div class="wc-balance">${App.money(balance)}</div>
+          </div>
+          <a href="dashboard.html?tab=wallet" class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);color:#fff">Manage wallet</a>
+        </div>
+        ${enough
+          ? `<p class="hint">After this payment your balance will be <b>${App.money(balance - grandTotal)}</b>.</p>`
+          : `<div class="wallet-insufficient">
+              <span>⚠️ Your balance doesn't cover this total (short ${App.money(grandTotal - balance)}).</span>
+              <button type="button" class="btn btn-primary btn-sm" onclick="Checkout.quickTopUp(${(grandTotal - balance).toFixed(2)})">Top up ${App.money(grandTotal - balance)}</button>
+            </div>`}
+      `;
+    }
+    if (m === "card") {
+      return `
+        <div class="form-row">
+          <div class="form-group" style="grid-column:1/-1"><label>Card number</label><input placeholder="4242 4242 4242 4242" id="co-card"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Expiry</label><input placeholder="MM/YY" id="co-exp"></div>
+          <div class="form-group"><label>CVC</label><input placeholder="123" id="co-cvc"></div>
+        </div>`;
+    }
+    if (m === "paypal") {
+      return `<p class="hint">You'll be redirected to PayPal to log in and confirm this payment.</p>
+        <div class="pay-brand-btn paypal">Pay<b>Pal</b></div>`;
+    }
+    if (m === "applepay") {
+      return `<p class="hint">Confirm with Face ID or Touch ID to pay with the card on file in Apple Wallet.</p>
+        <div class="pay-brand-btn applepay"> Pay</div>`;
+    }
+    if (m === "googlepay") {
+      return `<p class="hint">Pay using a card saved to your Google Account.</p>
+        <div class="pay-brand-btn googlepay">G Pay</div>`;
+    }
+    if (m === "cash") {
+      return `<p class="hint">Pay your driver directly with cash or card at the end of the ride. No charge is made now.</p>`;
+    }
+    return "";
+  }
+
+  function labelize(k) {
+    return k.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase());
+  }
+
+  window.Checkout = {
+    setMethod(m) {
+      method = m;
+      render();
+    },
+    quickTopUp(amount) {
+      const res = Booking.topUpWallet(amount, "demo top-up");
+      if (res.ok) { App.toast(`Added ${App.money(amount)} to your wallet`); render(); }
+    },
+    confirm(grandTotal) {
+      const name = document.getElementById("co-name").value.trim();
+      const email = document.getElementById("co-email").value.trim();
+      if (!name || !email.includes("@")) { App.toast("Please fill in your name and a valid email"); return; }
+
+      if (method === "card") {
+        const card = (document.getElementById("co-card").value || "").trim();
+        if (card.replace(/\s/g, "").length < 12) { App.toast("Please enter a valid card number"); return; }
+      }
+
+      if (method === "wallet") {
+        const pendingCheck = Booking.getPending();
+        const result = Booking.payFromWallet(grandTotal, pendingCheck.title);
+        if (!result.ok) { App.toast(result.error || "Payment failed — check your wallet balance"); render(); return; }
+      }
+
+      const pending = Booking.getPending();
+      const methodLabel = (METHODS.find(m => m.id === method) || {}).label || "Card";
+      const booking = Booking.confirmBooking({ ...pending, total: grandTotal, customer: { name, email }, paymentMethod: methodLabel });
+      location.href = `confirmation.html?ref=${booking.ref}`;
+    }
+  };
+
+  document.addEventListener("DOMContentLoaded", render);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create account — ChrisSlots</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="auth-wrap">
+  <div class="auth-card">
+    <h1 class="center" style="margin-bottom:6px">Create your account</h1>
+    <p class="center muted" style="margin-bottom:24px">Book faster and track every reservation in one place.</p>
+    <form onsubmit="return doRegister(event)">
+      <div class="form-group"><label>Full name</label><input id="rg-name" required placeholder="Jordan Lee"></div>
+      <div class="form-group"><label>Email</label><input id="rg-email" type="email" required placeholder="you@email.com"></div>
+      <div class="form-group"><label>Phone (optional)</label><input id="rg-phone" placeholder="+1 555 000 0000"></div>
+      <div class="form-group"><label>Password</label><input id="rg-password" type="password" required minlength="6" placeholder="At least 6 characters"></div>
+      <button class="btn btn-primary btn-block" type="submit">Create account</button>
+    </form>
+    <p class="auth-switch">Already have an account? <a href="login.html">Log in</a></p>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/booking.js"></script>
+<script src="js/app.js"></script>
+<script>
+function doRegister(e) {
+  e.preventDefault();
+  const res = Auth.register({
+    name: document.getElementById("rg-name").value.trim(),
+    email: document.getElementById("rg-email").value.trim(),
+    phone: document.getElementById("rg-phone").value.trim(),
+    password: document.getElementById("rg-password").value,
+  });
+  if (!res.ok) { App.toast(res.error); return false; }
+  App.toast(`Welcome to ChrisSlots, ${res.user.name.split(" ")[0]}!`);
+  setTimeout(() => location.href = "dashboard.html", 500);
+  return false;
+}
+</script>
+</body>
+</html>

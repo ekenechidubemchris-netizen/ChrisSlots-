@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="page-title">Details — ChrisSlots</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="section" style="padding-top:32px">
+  <div class="container" id="detail-root">
+    <!-- rendered by JS -->
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/booking.js"></script>
+<script src="js/app.js"></script>
+<script>
+(() => {
+  const type = App.qs("type", "restaurant");
+  const id = App.qs("id");
+  let item, getter;
+  const getters = { restaurant: DB.getRestaurant, hotel: DB.getHotel, venue: DB.getVenue, event: DB.getEvent, cinema: DB.getMovie };
+  getter = getters[type];
+  item = getter ? getter(id) : null;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const root = document.getElementById("detail-root");
+    if (!item) {
+      root.innerHTML = `<div class="empty-state"><div class="em-icon">🔍</div><h3>We couldn't find that listing</h3><p>It may have been removed.</p><a class="btn btn-primary" href="listing.html?type=all">Back to explore</a></div>`;
+      return;
+    }
+    document.title = `${item.name || item.title} — ChrisSlots`;
+
+    if (type === "cinema") { root.innerHTML = movieDetail(item); afterRender(); return; }
+
+    const images = [0,1,2].map(i => (i === 0 && item.image) || DB.img(type, DB.idIndex(item.id) + i));
+    root.innerHTML = `
+      <a href="listing.html?type=${type}" class="btn btn-ghost" style="padding-left:0;margin-bottom:14px">← Back to ${type}s</a>
+      <div class="gallery">
+        <img src="${images[0]}" alt="${item.name}">
+        <img src="${images[1]}" alt="${item.name} interior">
+        <img src="${images[2]}" alt="${item.name} view">
+      </div>
+
+      <div class="two-col" style="margin-top:34px">
+        <div>
+          <div class="card-top" style="align-items:center">
+            <div>
+              <h1 style="margin-bottom:4px">${item.name}</h1>
+              <p class="muted">${subline()}</p>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="icon-btn" id="fav-toggle" onclick="toggleFav()" aria-label="Save to favorites">${Booking.isFavorite(id) ? "♥" : "♡"}</button>
+              ${item.rating ? `<span class="rating-pill" style="height:40px;padding:0 14px">★ ${item.rating}</span>` : ""}
+            </div>
+          </div>
+
+          <p style="margin-top:18px">${item.desc}</p>
+
+          <div class="tag-row" style="margin:18px 0">
+            ${(item.amenities || []).map(a => `<span class="tag">${a}</span>`).join("")}
+          </div>
+
+          ${infoBlock()}
+          ${type === "restaurant" ? tableMapBlock() : ""}
+
+          <hr class="divider">
+          <h3>Reviews</h3>
+          <div id="reviews-list"></div>
+          <button class="btn btn-secondary btn-sm" style="margin-top:10px" onclick="App.toggleDropdown('never');document.getElementById('review-modal').classList.add('open')">Write a review</button>
+
+          <hr class="divider">
+          <h3>Frequently asked questions</h3>
+          <div class="faq-item"><div class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span>What's the cancellation policy?</span><span class="chev">⌄</span></div><div class="faq-a"><p>Most bookings can be cancelled free of charge up to 24 hours in advance from My Bookings.</p></div></div>
+          <div class="faq-item"><div class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span>Do I need to arrive early?</span><span class="chev">⌄</span></div><div class="faq-a"><p>We recommend arriving 10–15 minutes before your reserved time.</p></div></div>
+          <div class="faq-item"><div class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span>Can I change my party size later?</span><span class="chev">⌄</span></div><div class="faq-a"><p>Yes — contact support or rebook from My Bookings if your plans change.</p></div></div>
+        </div>
+
+        <div class="sticky">
+          ${reserveForm()}
+        </div>
+      </div>
+    `;
+    afterRender();
+  });
+
+  function subline() {
+    if (type === "restaurant") return `${item.cuisine} · ${item.city} · ${item.price}`;
+    if (type === "hotel") return item.city;
+    if (type === "venue") return `${item.city} · Up to ${item.capacity} guests`;
+    if (type === "event") return `${item.category} · ${item.city}`;
+    return "";
+  }
+
+  function infoBlock() {
+    if (type === "restaurant") return `<div class="card-meta" style="font-size:14px;gap:18px"><span>🕒 ${item.hours}</span><span>📍 ${item.city}</span></div>
+      <h4 style="margin-top:22px">Popular dishes</h4><div class="tag-row">${item.dishes.map(d=>`<span class="tag">${d}</span>`).join("")}</div>`;
+    if (type === "hotel") return `<h4 style="margin-top:10px">Room types</h4>
+      <div class="grid" style="grid-template-columns:1fr;gap:10px">
+      ${item.rooms.map((r,i) => `<label class="card" style="flex-direction:row;align-items:center;padding:14px;cursor:pointer">
+        <input type="radio" name="room" value="${i}" ${i===0?"checked":""} style="margin-right:12px" onchange="updateHotelTotal()">
+        <span style="flex:1"><b>${r.type}</b><br><span class="muted text-sm">${r.beds}</span></span>
+        <span class="price">${App.money(r.price)}<small>/night</small></span>
+      </label>`).join("")}</div>`;
+    if (type === "event") return `<div class="card-meta" style="font-size:14px;gap:18px"><span>📅 ${item.date}</span><span>🕒 ${item.time}</span><span>👤 ${item.organizer}</span><span>🎟 ${item.available} tickets left</span></div>`;
+    if (type === "venue") return `<div class="card-meta" style="font-size:14px;gap:18px"><span>👥 Capacity ${item.capacity}</span><span>📍 ${item.city}</span></div>`;
+    return "";
+  }
+
+  function reserveForm() {
+    const today = App.todayISO();
+    if (type === "restaurant") {
+      return `<div class="form-card">
+        <h3 style="margin-top:0">Reserve a table</h3>
+        <div class="form-group"><label>Date</label><input type="date" id="r-date" value="${today}" min="${today}"></div>
+        <div class="form-row">
+          <div class="form-group"><label>Time</label><select id="r-time"><option>18:00</option><option selected>19:00</option><option>19:30</option><option>20:00</option><option>20:30</option></select></div>
+          <div class="form-group"><label>Guests</label><input type="number" id="r-guests" value="2" min="1" max="20" onchange="refreshTableMap()"></div>
+        </div>
+        <div id="table-selection-readout" class="hint" style="background:var(--c-bg);border:1px solid var(--c-border);border-radius:10px;padding:10px 12px;margin-bottom:14px">Pick a table from the floor plan below ↓</div>
+        <div class="form-group"><label>Special request (optional)</label><textarea id="r-notes" placeholder="Allergies, celebrations, accessibility needs..."></textarea></div>
+        <button class="btn btn-primary btn-block" onclick="reserveRestaurant()">Reserve table</button>
+        <p class="hint" style="margin-top:10px">No payment required to reserve.</p>
+      </div>`;
+    }
+    if (type === "hotel") {
+      return `<div class="form-card">
+        <h3 style="margin-top:0" id="hotel-price-head">${App.money(item.rooms[0].price)} <small class="muted" style="font-weight:500">/ night</small></h3>
+        <div class="form-row">
+          <div class="form-group"><label>Check-in</label><input type="date" id="h-in" value="${today}" min="${today}" onchange="updateHotelTotal()"></div>
+          <div class="form-group"><label>Check-out</label><input type="date" id="h-out" value="${addDays(today,2)}" min="${today}" onchange="updateHotelTotal()"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Guests</label><input type="number" id="h-guests" value="2" min="1" max="10"></div>
+          <div class="form-group"><label>Rooms</label><input type="number" id="h-rooms" value="1" min="1" max="5" onchange="updateHotelTotal()"></div>
+        </div>
+        <hr class="divider" style="margin:16px 0">
+        <div class="flex" style="justify-content:space-between"><span>Total</span><b id="hotel-total">${App.money(item.rooms[0].price*2)}</b></div>
+        <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="reserveHotel()">Book room</button>
+      </div>`;
+    }
+    if (type === "event") {
+      return `<div class="form-card">
+        <h3 style="margin-top:0">Get tickets</h3>
+        ${item.tiers.map((t,i) => `<div class="flex items-center" style="justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--c-border)">
+          <div><b>${t.name}</b><br><span class="muted text-sm">${App.money(t.price)} each</span></div>
+          <input type="number" min="0" max="8" value="${i===0?1:0}" style="width:60px;border:1px solid var(--c-border);border-radius:8px;padding:6px" id="ev-qty-${i}" onchange="updateEventTotal()">
+        </div>`).join("")}
+        <hr class="divider" style="margin:16px 0">
+        <div class="flex" style="justify-content:space-between"><span>Total</span><b id="event-total">${App.money(item.tiers[0].price)}</b></div>
+        <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="reserveEvent()">Get tickets</button>
+      </div>`;
+    }
+    if (type === "venue") {
+      return `<div class="form-card">
+        <h3 style="margin-top:0">${App.money(item.price)} <small class="muted" style="font-weight:500">/ day</small></h3>
+        <div class="form-group"><label>Date</label><input type="date" id="v-date" value="${today}" min="${today}"></div>
+        <div class="form-row">
+          <div class="form-group"><label>Start time</label><input type="time" id="v-start" value="10:00"></div>
+          <div class="form-group"><label>Guests</label><input type="number" id="v-guests" value="20" min="1" max="${item.capacity}"></div>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="reserveVenue()">Reserve venue</button>
+      </div>`;
+    }
+    return "";
+  }
+
+  function addDays(iso, n) { const d = new Date(iso); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+
+  // --- Restaurant table map -------------------------------------------------
+  let selectedTable = null; // { zone, num, cap }
+  function seededRand(seed) { let s = seed; return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; }; }
+  function buildTableLayout() {
+    const r = seededRand((item.id || "x").length * 71 + 13);
+    const zones = [
+      { name: "Main Dining", count: 7, shapes: ["round", "round", "", "", "round", "", ""], caps: [2, 2, 4, 4, 6, 4, 2] },
+      { name: "Patio", count: 4, shapes: ["round", "", "round", ""], caps: [2, 4, 2, 4] },
+      { name: "Bar Seating", count: 3, shapes: ["round", "round", "round"], caps: [2, 2, 2] },
+    ];
+    return zones.map(z => ({
+      name: z.name,
+      tables: Array.from({ length: z.count }, (_, i) => ({
+        zone: z.name, num: i + 1, cap: z.caps[i], shape: z.shapes[i],
+        reserved: r() < 0.22,
+      })),
+    }));
+  }
+  let tableLayout = null;
+
+  function tableMapBlock() {
+    tableLayout = tableLayout || buildTableLayout();
+    return `
+      <h3>Choose your table</h3>
+      <p class="muted" style="margin-top:-10px">This restaurant's live floor plan — pick any open table that fits your party.</p>
+      <div class="seat-legend">
+        <div class="legend-item"><span class="legend-swatch" style="background:#E2E8F0"></span>Available</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--c-action)"></span>Selected</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:#FCA5A5"></span>Already booked</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:#F1F5F9"></span>Too small for your party</div>
+      </div>
+      <div class="table-map" id="table-map">${renderZones()}</div>
+    `;
+  }
+
+  function renderZones() {
+    const guests = Number(document.getElementById("r-guests")?.value || 2);
+    return tableLayout.map(zone => `
+      <div class="table-zone">
+        <h5>${zone.name}</h5>
+        <div class="table-row">
+          ${zone.tables.map(t => {
+            let state = "available";
+            if (t.reserved) state = "reserved";
+            else if (t.cap < guests) state = "toosmall";
+            else if (selectedTable && selectedTable.zone === t.zone && selectedTable.num === t.num) state = "selected";
+            const clickable = state === "available" || state === "selected";
+            return `<button type="button" class="table-tile ${t.shape} ${state}" ${clickable ? "" : "disabled"}
+              onclick="selectTable('${t.zone}', ${t.num}, ${t.cap}, this)">T${t.num}<small>${t.cap}-top</small></button>`;
+          }).join("")}
+        </div>
+      </div>`).join("");
+  }
+
+  window.refreshTableMap = function () {
+    const el = document.getElementById("table-map");
+    if (!el) return;
+    // guest count may now invalidate the current selection
+    const guests = Number(document.getElementById("r-guests").value || 2);
+    if (selectedTable && selectedTable.cap < guests) selectedTable = null;
+    el.innerHTML = renderZones();
+    updateTableReadout();
+  };
+
+  window.selectTable = function (zone, num, cap, btn) {
+    selectedTable = { zone, num, cap };
+    document.getElementById("table-map").innerHTML = renderZones();
+    updateTableReadout();
+  };
+
+  function updateTableReadout() {
+    const el = document.getElementById("table-selection-readout");
+    if (!el) return;
+    el.textContent = selectedTable
+      ? `Selected: ${selectedTable.zone}, Table ${selectedTable.num} (seats up to ${selectedTable.cap})`
+      : "Pick a table from the floor plan below ↓";
+  }
+
+  function afterRender() {
+    if (type !== "cinema") renderReviews();
+  }
+
+  function renderReviews() {
+    const el = document.getElementById("reviews-list");
+    if (!el) return;
+    const combined = [...Booking.getUserReviews(id), ...DB.genReviews(id)];
+    el.innerHTML = combined.map(r => `
+      <div class="review">
+        <div class="review-head"><span class="review-name">${r.name} ${r.verified ? `<span class="verified-tag">Verified booking</span>` : ""}</span><span class="muted text-sm">${r.date}</span></div>
+        <div class="stars">${App.stars(r.rating)}</div>
+        <p style="margin-top:6px">${r.comment}</p>
+      </div>`).join("");
+  }
+
+  window.toggleFav = function () {
+    const now = Booking.toggleFavorite({ id, type, name: item.name, sub: subline() });
+    document.getElementById("fav-toggle").textContent = now ? "♥" : "♡";
+    App.toast(now ? "Added to favorites" : "Removed from favorites");
+  };
+
+  window.updateHotelTotal = function () {
+    const room = item.rooms[Number(document.querySelector('input[name="room"]:checked')?.value || 0)];
+    const nights = Math.max(1, Math.round((new Date(document.getElementById("h-out").value) - new Date(document.getElementById("h-in").value)) / 86400000));
+    const rooms = Number(document.getElementById("h-rooms").value || 1);
+    document.getElementById("hotel-price-head").innerHTML = `${App.money(room.price)} <small class="muted" style="font-weight:500">/ night</small>`;
+    document.getElementById("hotel-total").textContent = App.money(room.price * nights * rooms);
+  };
+
+  window.updateEventTotal = function () {
+    let total = 0;
+    item.tiers.forEach((t,i) => total += t.price * Number(document.getElementById(`ev-qty-${i}`).value || 0));
+    document.getElementById("event-total").textContent = App.money(total);
+  };
+
+  window.reserveRestaurant = function () {
+    if (!selectedTable) { App.toast("Please choose a table from the floor plan first"); return; }
+    App.requireAuthOrPrompt(() => {
+      Booking.setPending({
+        type: "restaurant", title: `Table at ${item.name}`, provider: item.name,
+        date: document.getElementById("r-date").value, time: document.getElementById("r-time").value,
+        location: item.city, details: { guests: document.getElementById("r-guests").value, table: `${selectedTable.zone} · Table ${selectedTable.num} (${selectedTable.cap}-top)`, notes: document.getElementById("r-notes").value },
+        total: 0,
+      });
+      location.href = "checkout.html";
+    });
+  };
+  window.reserveHotel = function () {
+    App.requireAuthOrPrompt(() => {
+      const room = item.rooms[Number(document.querySelector('input[name="room"]:checked')?.value || 0)];
+      const nights = Math.max(1, Math.round((new Date(document.getElementById("h-out").value) - new Date(document.getElementById("h-in").value)) / 86400000));
+      const rooms = Number(document.getElementById("h-rooms").value || 1);
+      Booking.setPending({
+        type: "hotel", title: `${room.type} at ${item.name}`, provider: item.name,
+        date: document.getElementById("h-in").value, time: `${nights} night(s)`, location: item.city,
+        details: { checkin: document.getElementById("h-in").value, checkout: document.getElementById("h-out").value, guests: document.getElementById("h-guests").value, rooms },
+        total: room.price * nights * rooms,
+      });
+      location.href = "checkout.html";
+    });
+  };
+  window.reserveEvent = function () {
+    App.requireAuthOrPrompt(() => {
+      let total = 0, qtyDesc = [];
+      item.tiers.forEach((t,i) => { const q = Number(document.getElementById(`ev-qty-${i}`).value||0); if (q>0){ total += t.price*q; qtyDesc.push(`${q}× ${t.name}`);} });
+      if (!qtyDesc.length) { App.toast("Select at least one ticket"); return; }
+      Booking.setPending({
+        type: "event", title: item.name, provider: item.organizer,
+        date: item.date, time: item.time, location: item.city,
+        details: { tickets: qtyDesc.join(", ") }, total,
+      });
+      location.href = "checkout.html";
+    });
+  };
+  window.reserveVenue = function () {
+    App.requireAuthOrPrompt(() => {
+      Booking.setPending({
+        type: "venue", title: `${item.name}`, provider: item.name,
+        date: document.getElementById("v-date").value, time: document.getElementById("v-start").value, location: item.city,
+        details: { guests: document.getElementById("v-guests").value }, total: item.price,
+      });
+      location.href = "checkout.html";
+    });
+  };
+
+  function movieDetail(m) {
+    const showtimes = DB.getShowtimes(m.id);
+    return `
+      <a href="listing.html?type=cinema" class="btn btn-ghost" style="padding-left:0;margin-bottom:14px">← Back to cinema</a>
+      <div class="two-col">
+        <div>
+          <div class="two-col" style="grid-template-columns:220px 1fr">
+            <img src="${m.poster}" alt="${m.title} poster" style="border-radius:var(--radius-lg)">
+            <div>
+              <h1>${m.title}</h1>
+              <div class="tag-row"><span class="tag">${m.genre}</span><span class="tag">${m.rating}</span><span class="tag">${m.duration} min</span></div>
+              <p style="margin-top:14px">${m.desc}</p>
+            </div>
+          </div>
+          <hr class="divider">
+          <h3>Showtimes</h3>
+          <div id="showtimes-list">
+          ${showtimes.map(s => `
+            <div style="margin-bottom:18px">
+              <b>${s.cinema}</b>
+              <div class="filter-chip-row" style="margin-top:8px">
+                ${s.slots.map(sl => `<a class="chip" href="seatmap.html?type=cinema&id=${m.id}&time=${encodeURIComponent(sl.time)}&price=${sl.price}&cinema=${encodeURIComponent(s.cinema)}">${sl.time} · ${App.money(sl.price)}</a>`).join("") || `<span class="muted text-sm">Sold out today</span>`}
+              </div>
+            </div>`).join("")}
+          </div>
+        </div>
+        <div></div>
+      </div>
+    `;
+  }
+})();
+</script>
+
+<div class="modal-overlay" id="review-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="document.getElementById('review-modal').classList.remove('open')">✕</button>
+    <h3>Write a review</h3>
+    <div class="form-group"><label>Your rating</label>
+      <select id="rev-rating"><option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3">★★★☆☆</option></select>
+    </div>
+    <div class="form-group"><label>Your review</label><textarea id="rev-comment" placeholder="Share your experience..."></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="submitReview()">Submit review</button>
+  </div>
+</div>
+<script>
+function submitReview() {
+  const comment = document.getElementById("rev-comment").value.trim();
+  if (!comment) { App.toast("Please write a short review first"); return; }
+  const user = Auth.currentUser();
+  const id = App.qs("id");
+  Booking.addReview(id, { name: user ? user.name : "Guest", rating: Number(document.getElementById("rev-rating").value), date: App.todayISO(), comment, verified: !!user });
+  document.getElementById("review-modal").classList.remove("open");
+  document.getElementById("rev-comment").value = "";
+  App.toast("Thanks for your review!");
+  location.reload();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChrisSlots — Book it. Reserve it. Enjoy it.</title>
+<meta name="description" content="Discover, compare and reserve trains, buses, cabs, restaurants, hotels, cinemas, events, flights and venues — all in one place.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<header class="hero">
+  <div class="container hero-inner">
+    <span class="hero-eyebrow">✨ One platform, every reservation</span>
+    <h1>Book it. Reserve it. Enjoy it.</h1>
+    <p class="lead">Find and reserve your next journey, table, room, event, seat, or experience — all in one place.</p>
+  </div>
+</header>
+
+<div class="container">
+  <div class="search-box">
+    <div class="search-tabs" id="home-search-tabs"></div>
+    <form id="home-search-form" class="search-grid" onsubmit="return HomeSearch.submit(event)"></form>
+  </div>
+</div>
+
+<main>
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <div><h2>Everything you can reserve, in one place</h2><p>Pick a category to see live availability and pricing.</p></div>
+      </div>
+      <div class="cat-grid" id="home-categories"></div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="two-col" style="align-items:center">
+        <div>
+          <h2>Popular restaurants near you</h2>
+          <p class="muted">Real-time tables at places worth the trip.</p>
+          <div class="grid" id="home-restaurants" style="margin-top:20px"></div>
+          <a href="listing.html?type=restaurant" class="btn btn-secondary" style="margin-top:20px">Browse all restaurants</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="section-head">
+        <div><h2>Stays people keep coming back to</h2><p>Hand-picked hotels across the country.</p></div>
+        <a href="listing.html?type=hotel" class="btn btn-secondary btn-sm">View all hotels</a>
+      </div>
+      <div class="grid" id="home-hotels"></div>
+    </div>
+  </section>
+
+  <section class="section" style="background:#fff;border-top:1px solid var(--c-border);border-bottom:1px solid var(--c-border)">
+    <div class="container">
+      <div class="section-head">
+        <div><h2>Happening soon</h2><p>Concerts, conferences and shows you can still catch.</p></div>
+        <a href="listing.html?type=event" class="btn btn-secondary btn-sm">See all events</a>
+      </div>
+      <div class="grid" id="home-events"></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container center">
+      <div class="stat-strip" style="justify-content:center">
+        <div class="stat"><b>9</b><span>service categories</span></div>
+        <div class="stat"><b>120+</b><span>cities covered</span></div>
+        <div class="stat"><b>4.6★</b><span>average rating</span></div>
+        <div class="stat"><b>24/7</b><span>booking support</span></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/booking.js"></script>
+<script src="js/app.js"></script>
+<script src="js/search.js"></script>
+<script>
+const HomeSearch = (() => {
+  const TYPES = [
+    { type: "restaurant", label: "🍽 Restaurant" },
+    { type: "hotel", label: "🏨 Hotel" },
+    { type: "train", label: "🚆 Train" },
+    { type: "bus", label: "🚌 Bus" },
+    { type: "cab", label: "🚕 Cab" },
+    { type: "flight", label: "✈️ Flight" },
+    { type: "event", label: "🎟 Events" },
+    { type: "cinema", label: "🎬 Cinema" },
+    { type: "venue", label: "🏢 Venue" },
+  ];
+  let active = "restaurant";
+
+  function renderTabs() {
+    document.getElementById("home-search-tabs").innerHTML = TYPES.map(t => `
+      <button type="button" class="search-tab ${active === t.type ? "active" : ""}" onclick="HomeSearch.setActive('${t.type}')">${t.label}</button>
+    `).join("");
+  }
+  function setActive(t) { active = t; renderTabs(); renderFields(); }
+
+  function cityOptions(selected) {
+    return `<option value="">Any city</option>` + DB.CITIES.map(c => `<option ${c===selected?"selected":""}>${c}</option>`).join("");
+  }
+
+  function renderFields() {
+    const form = document.getElementById("home-search-form");
+    const today = App.todayISO();
+    let fields = "";
+    if (["train","bus","flight"].includes(active)) {
+      fields = `
+        <div class="field"><label>From</label><select name="from">${cityOptions("New York")}</select></div>
+        <div class="field"><label>To</label><select name="to">${cityOptions("Boston")}</select></div>
+        <div class="field"><label>Date</label><input type="date" name="date" value="${today}" min="${today}"></div>
+        <div class="field"><label>Passengers</label><input type="number" name="pax" value="1" min="1" max="9"></div>`;
+    } else if (active === "cab") {
+      fields = `
+        <div class="field"><label>Pickup</label><input type="text" name="pickup" placeholder="Current location" required></div>
+        <div class="field"><label>Destination</label><input type="text" name="dest" placeholder="Where to?" required></div>
+        <div class="field"><label>Date</label><input type="date" name="date" value="${today}" min="${today}"></div>
+        <div class="field"><label>Time</label><input type="time" name="time" value="12:00"></div>`;
+    } else if (active === "restaurant") {
+      fields = `
+        <div class="field"><label>Location</label><select name="city">${cityOptions("")}</select></div>
+        <div class="field"><label>Date</label><input type="date" name="date" value="${today}" min="${today}"></div>
+        <div class="field"><label>Time</label><input type="time" name="time" value="19:00"></div>
+        <div class="field"><label>Guests</label><input type="number" name="guests" value="2" min="1" max="20"></div>`;
+    } else if (active === "hotel") {
+      fields = `
+        <div class="field"><label>Destination</label><select name="city">${cityOptions("New York")}</select></div>
+        <div class="field"><label>Check-in</label><input type="date" name="checkin" value="${today}" min="${today}"></div>
+        <div class="field"><label>Check-out</label><input type="date" name="checkout" value="${today}" min="${today}"></div>
+        <div class="field"><label>Guests</label><input type="number" name="guests" value="2" min="1" max="10"></div>`;
+    } else if (active === "event") {
+      fields = `
+        <div class="field"><label>City</label><select name="city">${cityOptions("")}</select></div>
+        <div class="field"><label>Date</label><input type="date" name="date"></div>`;
+    } else if (active === "cinema") {
+      fields = `
+        <div class="field"><label>City</label><select name="city">${cityOptions("")}</select></div>
+        <div class="field"><label>Date</label><input type="date" name="date" value="${today}" min="${today}"></div>`;
+    } else if (active === "venue") {
+      fields = `
+        <div class="field"><label>City</label><select name="city">${cityOptions("")}</select></div>
+        <div class="field"><label>Date</label><input type="date" name="date" value="${today}" min="${today}"></div>
+        <div class="field"><label>Guests</label><input type="number" name="guests" value="20" min="1"></div>`;
+    }
+    form.innerHTML = fields + `<div class="field search-submit"><button class="btn btn-primary btn-block" type="submit">🔎 Search</button></div>`;
+  }
+
+  function submit(e) {
+    e.preventDefault();
+    const data = new FormData(e.target);
+    const p = new URLSearchParams();
+    p.set("type", active);
+    if (data.get("city")) p.set("city", data.get("city"));
+    if (data.get("from")) p.set("from", data.get("from"));
+    if (data.get("to")) p.set("to", data.get("to"));
+    if (active === "cab") { location.href = `booking.html?${p.toString()}`; return false; }
+    location.href = `listing.html?${p.toString()}`;
+    return false;
+  }
+
+  document.addEventListener("DOMContentLoaded", () => { renderTabs(); renderFields(); });
+  return { setActive, submit };
+})();
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("home-categories").innerHTML = DB.CATEGORIES.map(c => `
+    <a class="cat-card" href="listing.html?type=${c.type}">
+      <div class="cat-icon">${c.icon}</div>
+      <h4>${c.name}</h4>
+      <p>${c.desc}</p>
+    </a>`).join("");
+
+  const rs = DB.getRestaurants().slice(0, 3);
+  document.getElementById("home-restaurants").innerHTML = rs.map(r => `
+    <a class="card" href="details.html?type=restaurant&id=${r.id}">
+      <div class="card-media"><img src="${DB.img("restaurant", DB.idIndex(r.id))}" alt="${r.name}" loading="lazy"><span class="card-badge">${r.price}</span></div>
+      <div class="card-body"><div class="card-top"><h3>${r.name}</h3><span class="rating-pill">★ ${r.rating}</span></div>
+      <div class="card-meta"><span>📍 ${r.city}</span><span>🍽 ${r.cuisine}</span></div></div>
+    </a>`).join("");
+
+  const hs = DB.getHotels().slice(0, 3);
+  document.getElementById("home-hotels").innerHTML = hs.map(h => `
+    <a class="card" href="details.html?type=hotel&id=${h.id}">
+      <div class="card-media"><img src="${DB.img("hotel", DB.idIndex(h.id))}" alt="${h.name}" loading="lazy"></div>
+      <div class="card-body"><div class="card-top"><h3>${h.name}</h3><span class="rating-pill">★ ${h.rating}</span></div>
+      <div class="card-meta"><span>📍 ${h.city}</span></div>
+      <div class="card-foot"><span class="price">${App.money(h.price)}<small>/night</small></span></div></div>
+    </a>`).join("");
+
+  const evs = DB.getEvents().slice(0, 3);
+  document.getElementById("home-events").innerHTML = evs.map(ev => `
+    <a class="card" href="details.html?type=event&id=${ev.id}">
+      <div class="card-media"><img src="${ev.image}" alt="${ev.name}" loading="lazy"><span class="card-badge">${ev.category}</span></div>
+      <div class="card-body"><h3>${ev.name}</h3><div class="card-meta"><span>📅 ${ev.date}</span><span>📍 ${ev.city}</span></div></div>
+    </a>`).join("");
+});
+</script>
+</body>
+</html>
