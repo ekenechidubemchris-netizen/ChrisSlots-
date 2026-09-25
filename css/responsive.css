@@ -1,1 +1,58 @@
+/* ==========================================================================
+   ChrisSlots — responsive.css
+   Mobile-first overrides, loaded after style.css.
+   ========================================================================== */
+
+@media (max-width: 1080px) {
+  .listing-layout { grid-template-columns: 1fr; }
+  .filters-panel { position: static; }
+  .two-col { grid-template-columns: 1fr; }
+  .sticky { position: static; }
+  .footer-grid { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+@media (max-width: 860px) {
+  .nav-links { display: none; }
+  .hamburger { display: flex; }
+  .search-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .gallery { grid-template-columns: 1fr 1fr; height: auto; }
+  .gallery > *:first-child { grid-row: span 1; aspect-ratio: 16/9; }
+  .gallery img { aspect-ratio: 4/3; }
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+  .stat-strip { gap: 22px; }
+}
+
+@media (max-width: 640px) {
+  .container { padding: 0 16px; }
+  .section { padding: 44px 0; }
+  .hero { padding: 44px 0 96px; }
+  .hero h1 { font-size: 30px; }
+  .search-box { padding: 16px; margin-top: -56px; }
+  .grid { grid-template-columns: 1fr; }
+  .cat-grid { grid-template-columns: repeat(2, 1fr); }
+  .footer-grid { grid-template-columns: 1fr; gap: 26px; }
+  .footer-bottom { flex-direction: column; align-items: flex-start; }
+  .nav-inner { height: 66px; gap: 12px; }
+  .user-chip span { display: none; }
+  .stat-strip { gap: 18px 26px; }
+  .steps-row { display: none; }
+  .modal { padding: 22px; }
+  .gallery { grid-template-columns: 1fr; height: auto; }
+  .gallery > * { aspect-ratio: 16/9; }
+  .trust-row { gap: 22px 28px; }
+  .trust-item { min-width: 88px; }
+  .trust-icon { width: 40px; height: 40px; font-size: 17px; }
+  .footer-body { padding: 40px 0 22px; }
+  .social-pill { font-size: 13px; padding: 6px 14px 6px 6px; }
+  .accept-badge { font-size: 12px; padding: 7px 12px; }
+}
+
+@media (max-width: 420px) {
+  .cat-grid { grid-template-columns: 1fr 1fr; }
+  .brand span.brand-text { font-size: 17px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
 
